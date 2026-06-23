@@ -25,22 +25,26 @@ export const useGooglePlaces = () => {
       setLoading(true);
       setError(null);
 
-      // ponytail: Overpass API dla wyszukiwania "optometrist" (healthcare)
-      const radiusM = radiusKm * 1000;
-      const bbox = `(${location.lat - radiusKm / 111},${location.lng - radiusKm / 111},${
-        location.lat + radiusKm / 111
-      },${location.lng + radiusKm / 111})`;
+    // ponytail: Overpass API dla wyszukiwania "optometrist" (healthcare + optician shops)
+    const radiusM = radiusKm * 1000;
+    const bbox = `(${location.lat - radiusKm / 111},${location.lng - radiusKm / 111},${
+      location.lat + radiusKm / 111
+    },${location.lng + radiusKm / 111})`;
 
-      const query = `
-        [bbox:${bbox}];
-        (
-          node["healthcare"="optometrist"](${bbox});
-          way["healthcare"="optometrist"](${bbox});
-          node["shop"="optician"](${bbox});
-          way["shop"="optician"](${bbox});
-        );
-        out center;
-      `;
+    const query = `
+      [bbox:${bbox}];
+      (
+        node["healthcare"="optometrist"](${bbox});
+        way["healthcare"="optometrist"](${bbox});
+        node["healthcare"="ophthalmology"](${bbox});
+        way["healthcare"="ophthalmology"](${bbox});
+        node["shop"="optician"](${bbox});
+        way["shop"="optician"](${bbox});
+        node["shop"="glasses"](${bbox});
+        way["shop"="glasses"](${bbox});
+      );
+      out center;
+    `;
 
       axios
         .post('https://overpass-api.de/api/interpreter', `data=${encodeURIComponent(query)}`, {
@@ -53,20 +57,33 @@ export const useGooglePlaces = () => {
             .filter((el: any) => el.lat && el.lon)
             .map((el: any, idx: number) => {
               const center = el.center || { lat: el.lat, lon: el.lon };
+              const tags = el.tags || {};
+              
+              // Build address from available tags
+              const address = [
+                tags['addr:street'],
+                tags['addr:housenumber'],
+                tags['addr:postcode'],
+                tags['addr:city'],
+                tags['addr:town'],
+                tags['addr:suburb']
+              ]
+                .filter(Boolean)
+                .join(', ') || tags.name || 'Adres nieznany';
+
               return {
                 id: `${el.id}`,
-                name: el.tags?.name || el.tags?.['healthcare:speciality'] || 'Optyka',
-                address: [el.tags?.['addr:street'], el.tags?.['addr:city']]
-                  .filter(Boolean)
-                  .join(', ') || 'Adres nieznany',
+                name: tags.name || tags['healthcare:speciality'] || tags.shop || 'Optyka',
+                address: address,
                 lat: center.lat,
                 lng: center.lon,
-                phone: el.tags?.['contact:phone'] || el.tags?.phone,
-                website: el.tags?.website || el.tags?.['contact:website'],
-                type: el.tags?.healthcare || el.tags?.shop || 'healthcare',
+                phone: tags['contact:phone'] || tags.phone,
+                website: tags.website || tags['contact:website'],
+                type: tags.healthcare || tags.shop || 'healthcare',
               };
             });
 
+          console.log(`Found ${results.length} places`);
           setPlaces(results);
         })
         .catch(() => {

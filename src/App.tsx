@@ -10,7 +10,7 @@ function App() {
   const { location, error: geoError, loading: geoLoading } = useGeolocation();
   const { places, loading: searchLoading, error: searchError, searchPlaces } = useGooglePlaces();
   const [selectedPlace, setSelectedPlace] = useState<PlaceResult | null>(null);
-  const [radius, setRadius] = useState(5); // 5km domyślnie
+  const [radius, setRadius] = useState(50); // 50km domyślnie
 
   // Wyszukiwanie miejsc gdy geolokacja się załaduje
   useEffect(() => {
@@ -44,11 +44,13 @@ function App() {
             onChange={(e) => setRadius(Number(e.target.value))}
             className="radius-select"
           >
-            <option value={1}>1 km</option>
-            <option value={2.5}>2.5 km</option>
             <option value={5}>5 km</option>
             <option value={10}>10 km</option>
             <option value={25}>25 km</option>
+            <option value={50}>50 km</option>
+            <option value={100}>100 km</option>
+            <option value={150}>150 km</option>
+            <option value={200}>200 km</option>
           </select>
           <span className="location-display">
             📍 {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
