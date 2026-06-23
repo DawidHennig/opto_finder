@@ -1,33 +1,54 @@
 import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+import iconRetina from 'leaflet/dist/images/marker-icon-2x.png';
 import { GeolocationCoords } from '../hooks/useGeolocation';
 import { PlaceResult } from '../hooks/useGooglePlaces';
 import 'leaflet/dist/leaflet.css';
 
-// Fix Leaflet default icons
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-const userIcon = L.icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+// ponytail: Fix Leaflet icon loading in React - explicit paths
+const DefaultIcon = L.icon({
+  iconUrl: icon,
+  iconRetinaUrl: iconRetina,
+  shadowUrl: iconShadow,
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
+  shadowSize: [41, 41],
 });
 
-const selectedIcon = L.icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+// Custom icons for map
+const blueIcon = L.icon({
+  iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNSIgaGVpZ2h0PSI0MSIgdmlld0JveD0iMCAwIDI1IDQxIj48cGF0aCBmaWxsPSIjMjE2OEQzIiBkPSJNMTIuNSAwQzUuNTk2IDAgMCA1LjU5NiAwIDEyLjVjMCA5LjM3NSAxMi41IDI4LjEyNSAxMi41IDI4LjEyNXMyIDIuODEyIDEyLjUgLTI4LjEyNWMwIC02LjkwNCA1LjU5NiAtMTIuNSAtMTIuNSAtMTIuNXoiLz48L3N2Zz4=',
+  shadowUrl: iconShadow,
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
+  shadowSize: [41, 41],
 });
+
+const redIcon = L.icon({
+  iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNSIgaGVpZ2h0PSI0MSIgdmlld0JveD0iMCAwIDI1IDQxIj48cGF0aCBmaWxsPSIjRkY0NDMzIiBkPSJNMTIuNSAwQzUuNTk2IDAgMCA1LjU5NiAwIDEyLjVjMCA5LjM3NSAxMi41IDI4LjEyNSAxMi41IDI4LjEyNXMyIDIuODEyIDEyLjUgLTI4LjEyNWMwIC02LjkwNCA1LjU5NiAtMTIuNSAtMTIuNSAtMTIuNXoiLz48L3N2Zz4=',
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+const yellowIcon = L.icon({
+  iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNSIgaGVpZ2h0PSI0MSIgdmlld0JveD0iMCAwIDI1IDQxIj48cGF0aCBmaWxsPSIjRkZCQzAwIiBkPSJNMTIuNSAwQzUuNTk2IDAgMCA1LjU5NiAwIDEyLjVjMCA5LjM3NSAxMi41IDI4LjEyNSAxMi41IDI4LjEyNXMyIDIuODEyIDEyLjUgLTI4LjEyNWMwIC02LjkwNCA1LjU5NiAtMTIuNSAtMTIuNSAtMTIuNXoiLz48L3N2Zz4=',
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+// Set default icon
+L.Marker.prototype.options.icon = DefaultIcon;
 
 interface MapUpdaterProps {
   center: GeolocationCoords;
@@ -57,8 +78,8 @@ export const Map: React.FC<MapProps> = ({ center, places, selectedPlace, onPlace
       />
       <MapUpdater center={center} />
 
-      {/* User location marker */}
-      <Marker position={[center.lat, center.lng]} icon={userIcon} title="Twoja lokalizacja">
+      {/* User location marker - blue */}
+      <Marker position={[center.lat, center.lng]} icon={blueIcon} title="Twoja lokalizacja">
         <Popup>📍 Twoja lokalizacja</Popup>
       </Marker>
 
@@ -67,7 +88,7 @@ export const Map: React.FC<MapProps> = ({ center, places, selectedPlace, onPlace
         <Marker
           key={place.id}
           position={[place.lat, place.lng]}
-          icon={selectedPlace?.id === place.id ? selectedIcon : undefined}
+          icon={selectedPlace?.id === place.id ? redIcon : yellowIcon}
           title={place.name}
           eventHandlers={{
             click: () => onPlaceClick(place),
