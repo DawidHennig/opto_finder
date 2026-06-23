@@ -15,14 +15,16 @@ Aplikacja webowa do wyszukiwania miejsc pracy dla optometrystów. Wyświetla wyn
 
 ## ⚡ Quick Start
 
-**Zaraz? Tylko 5 minut:**
+**Zaraz? Tylko 3 minuty - bez API Key!**
 
-1. Zdobądź Google Maps API Key: https://console.cloud.google.com → Enable Maps JS API + Places API
-2. `cp .env.example .env.local && echo "REACT_APP_GOOGLE_MAPS_API_KEY=YOUR_KEY" >> .env.local`
-3. `npm start`
-4. Aplikacja otwiera się na http://localhost:3000
-5. Pozwól na dostęp do lokalizacji
-6. Gotowe! 🎉
+```bash
+npm install
+npm start
+```
+
+→ Otwiera się http://localhost:3000  
+→ Pozwól na dostęp do lokalizacji  
+→ Gotowe! 🎉
 
 👉 **Szczegóły:** zobacz `QUICKSTART.md`
 
@@ -31,9 +33,14 @@ Aplikacja webowa do wyszukiwania miejsc pracy dla optometrystów. Wyświetla wyn
 ## Wymagania
 
 - Node.js 14+ i npm
-- **Google Cloud API Key** z włączonymi:
-  - Google Maps API
-  - Places API
+- Brak konieczności API Key (100% darmowe!)
+- OpenStreetMap + Overpass API (wolne źródła)
+
+## Wymagania
+
+- Node.js 14+ i npm
+- Brak konieczności API Key (100% darmowe!)
+- OpenStreetMap + Overpass API (wolne źródła)
 
 ## Setup (Pełny)
 
@@ -43,24 +50,7 @@ cd /Users/dawid/fun/opto_finder
 npm install
 ```
 
-### 2. Konfiguracja API Key
-
-Utwórz plik `.env.local` w root projektu:
-
-```bash
-REACT_APP_GOOGLE_MAPS_API_KEY=YOUR_API_KEY_HERE
-```
-
-Gdzie `YOUR_API_KEY_HERE` to Twój klucz z Google Cloud Console.
-
-**Jak uzyskać API Key:**
-1. Wejdź na https://console.cloud.google.com
-2. Stwórz projekt
-3. Włącz: Maps JavaScript API i Places API
-4. Wygeneruj API Key w sekcji Credentials
-5. Wklej do `.env.local`
-
-### 3. Uruchomienie
+### 2. Uruchomienie
 
 **Tryb development:**
 ```bash
@@ -92,10 +82,11 @@ src/
 
 ## Notatki
 
-- **Ponytail**: Bez backendu, bezpośrednio z Google Places API
-- **Markery**: Niebieska = Twoja lokalizacja, Żółta = wyniki, Czerwona = zaznaczony
+- **100% darmowe** - OpenStreetMap (nie Google Maps)
+- **Bez limitów API** - Overpass API dla wyszukiwania
 - **Geolokacja**: Wymaga zgody użytkownika
-- **CORS**: Google Maps API obsługuje domeny, dodaj swoje w Cloud Console
+- **Dane** pochodzą z OpenStreetMap (wolne źródło)
+- **Performance**: 125 KB JS (gzipped, razem z Leaflet)
 
 ## Deployment
 

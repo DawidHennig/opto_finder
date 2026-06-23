@@ -1,40 +1,15 @@
-# ⚡ Quick Start (5 minut)
+# ⚡ Quick Start (3 minuty)
 
-## 1. Pobierz Google Maps API Key
-
-1. Wejdź na: https://console.cloud.google.com
-2. "New Project" → Nazwa: `OptoFinder`
-3. W search wpisz `Maps JavaScript API` → Enable
-4. W search wpisz `Places API` → Enable
-5. Idź do "Credentials" → "Create API Key"
-6. Skopiuj klucz
-
-> 📖 Szczegóły: patrz `GOOGLE_CLOUD_SETUP.md`
-
----
-
-## 2. Setup projektu
+## 1. Zainstaluj zależności
 
 ```bash
 cd /Users/dawid/fun/opto_finder
-
-# Skopiuj template .env
-cp .env.example .env.local
-
-# Edytuj .env.local i wstaw Twój klucz
-# REACT_APP_GOOGLE_MAPS_API_KEY=AIzaSy...
-```
-
-Użyj dowolnego edytora (VS Code, nano, etc.):
-```bash
-nano .env.local
-# Paste: REACT_APP_GOOGLE_MAPS_API_KEY=YOUR_KEY_HERE
-# Ctrl+X → Y → Enter (save)
+npm install
 ```
 
 ---
 
-## 3. Uruchom aplikację
+## 2. Uruchom aplikację
 
 ```bash
 npm start
@@ -42,17 +17,15 @@ npm start
 
 Browser się otworzy automatycznie na `http://localhost:3000`
 
-Lub ręcznie: otwórz http://localhost:3000
+---
+
+## 3. Pozwól na dostęp do lokalizacji
+
+Aplikacja zapyta: **"Pozwól na dostęp do lokalizacji?"** → Klikni **Allow**
 
 ---
 
-## 4. Pozwól na dostęp do lokalizacji
-
-Aplikacja zapyta: "Pozwól na dostęp do lokalizacji?" → **Allow**
-
----
-
-## 5. Przeglądaj wyniki!
+## 4. Przeglądaj wyniki!
 
 - 🗺️ Mapa pokazuje Twoją lokalizację (niebieska igła)
 - 🟡 Żółte igły = miejsca pracy dla optometrystów
@@ -61,32 +34,44 @@ Aplikacja zapyta: "Pozwól na dostęp do lokalizacji?" → **Allow**
 
 ---
 
+## ✨ 100% Darmowe!
+
+Brak API Key, brak limitów, brak kosztów. Używamy:
+- **OpenStreetMap** do map
+- **Overpass API** do wyszukiwania
+- **Browser Geolocation API** do lokalizacji
+
+👉 Szczegóły: `OPENSTREETMAP.md`
+
+---
+
 ## Troubleshooting
 
-**"Brak REACT_APP_GOOGLE_MAPS_API_KEY"**
+**"npm install nie działa"**
 ```bash
-cat .env.local  # Sprawdź czy jest klucz
-# Jeśli pusty lub zawiera YOUR_API_KEY, zamiast rzeczywistego → edit
+rm -rf node_modules package-lock.json
+npm install
 ```
 
 **"Mapa nie ładuje się"**
-1. Sprawdź Chrome DevTools (F12 → Console) → czy są błędy?
-2. Sprawdź czy API Keys są włączone w Google Cloud
-3. Czekaj 30s - nowe klucze mogą chwilę się inicjalizować
+1. Czekaj 2-3 sekundy (Leaflet się ładuje)
+2. Sprawdź internet (OSM CDN)
+3. Otwórz DevTools (F12 → Console) i sprawdzaj błędy
 
-**"Brak wyników"**
-- Spróbuj zasięg 10km zamiast 5km
-- Pewne miasta mogą nie mieć danych w Google Maps
+**"Brak wyników dla optometrystów"**
+- Spróbuj zasięg 10-25 km zamiast 5 km
+- Dane pochodzą z OpenStreetMap (crowd-sourced)
+- Możesz dodać dane! https://www.openstreetmap.org/edit
 
 ---
 
 ## Następne kroki
 
-- 📖 Czytaj `README.md` dla pełnej dokumentacji
-- 🚀 Czytaj `DEPLOYMENT.md` do wdrażania online
-- 👤 Czytaj `USER_GUIDE.md` do instrukcji dla użytkowników
-- 🏗️ Czytaj `ARCHITECTURE.md` do szczegółów technicznych
+- 📖 `README.md` - pełna dokumentacja
+- 🚀 `DEPLOYMENT.md` - wdrażanie online
+- 👤 `USER_GUIDE.md` - instrukcja dla użytkowników
+- 🗺️ `OPENSTREETMAP.md` - jak działa OSM
 
 ---
 
-**Gotowe!** Aplikacja jest w pełni działająca. 🎉
+**Gotowe!** Aplikacja pracuje w pełni. 🎉

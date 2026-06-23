@@ -1,6 +1,45 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import { GeolocationCoords } from '../hooks/useGeolocation';
 import { PlaceResult } from '../hooks/useGooglePlaces';
+import 'leaflet/dist/leaflet.css';
+
+// Fix Leaflet default icons
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+const userIcon = L.icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+});
+
+const selectedIcon = L.icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+});
+
+interface MapUpdaterProps {
+  center: GeolocationCoords;
+}
+
+const MapUpdater: React.FC<MapUpdaterProps> = ({ center }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView([center.lat, center.lng], 13);
+  }, [center, map]);
+  return null;
+};
 
 interface MapProps {
   center: GeolocationCoords;
@@ -10,68 +49,38 @@ interface MapProps {
 }
 
 export const Map: React.FC<MapProps> = ({ center, places, selectedPlace, onPlaceClick }) => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<any>(null);
-  const markers = useRef<any[]>([]);
-  const userMarker = useRef<any>(null);
-
-  useEffect(() => {
-    if (!mapContainer.current || map.current) return;
-
-    const googleMap = new (window as any).google.maps.Map(mapContainer.current, {
-      zoom: 13,
-      center: { lat: center.lat, lng: center.lng },
-      mapTypeControl: true,
-      streetViewControl: false,
-    });
-
-    map.current = googleMap;
-
-    // Marker dla lokalizacji użytkownika
-    userMarker.current = new (window as any).google.maps.Marker({
-      position: { lat: center.lat, lng: center.lng },
-      map: googleMap,
-      title: 'Twoja lokalizacja',
-      icon: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png',
-    });
-  }, [center]);
-
-  // Aktualizacja markerów dla miejsc
-  useEffect(() => {
-    if (!map.current) return;
-
-    // Usunięcie starych markerów
-    markers.current.forEach((marker) => marker.setMap(null));
-    markers.current = [];
-
-    places.forEach((place) => {
-      const marker = new (window as any).google.maps.Marker({
-        position: { lat: place.lat, lng: place.lng },
-        map: map.current,
-        title: place.name,
-        icon:
-          selectedPlace?.id === place.id
-            ? 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
-            : 'http://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
-      });
-
-      marker.addListener('click', () => {
-        onPlaceClick(place);
-      });
-
-      markers.current.push(marker);
-    });
-  }, [places, selectedPlace, onPlaceClick]);
-
   return (
-    <div
-      ref={mapContainer}
-      style={{
-        width: '100%',
-        height: '600px',
-        borderRadius: '8px',
-        overflow: 'hidden',
-      }}
-    />
+    <MapContainer center={[center.lat, center.lng]} zoom={13} style={{ height: '600px', borderRadius: '8px' }}>
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      <MapUpdater center={center} />
+
+      {/* User location marker */}
+      <Marker position={[center.lat, center.lng]} icon={userIcon} title="Twoja lokalizacja">
+        <Popup>📍 Twoja lokalizacja</Popup>
+      </Marker>
+
+      {/* Place markers */}
+      {places.map((place) => (
+        <Marker
+          key={place.id}
+          position={[place.lat, place.lng]}
+          icon={selectedPlace?.id === place.id ? selectedIcon : undefined}
+          title={place.name}
+          eventHandlers={{
+            click: () => onPlaceClick(place),
+          }}
+        >
+          <Popup>
+            <div style={{ fontSize: '12px' }}>
+              <strong>{place.name}</strong>
+              <p style={{ margin: '4px 0' }}>{place.address}</p>
+            </div>
+          </Popup>
+        </Marker>
+      ))}
+    </MapContainer>
   );
 };

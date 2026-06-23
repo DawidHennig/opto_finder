@@ -10,7 +10,7 @@ function App() {
   const { location, error: geoError, loading: geoLoading } = useGeolocation();
   const { places, loading: searchLoading, error: searchError, searchPlaces } = useGooglePlaces();
   const [selectedPlace, setSelectedPlace] = useState<PlaceResult | null>(null);
-  const [radius, setRadius] = useState(5000); // 5km domyślnie
+  const [radius, setRadius] = useState(5); // 5km domyślnie
 
   // Wyszukiwanie miejsc gdy geolokacja się załaduje
   useEffect(() => {
@@ -18,25 +18,6 @@ function App() {
       searchPlaces(location, radius);
     }
   }, [location, radius, searchPlaces]);
-
-  // ponytail: Google Maps script loader - inline, nie lib, zaoszczędza HTTP request
-  useEffect(() => {
-    const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
-    if (!apiKey) {
-      console.error('Brak REACT_APP_GOOGLE_MAPS_API_KEY w .env.local');
-      return;
-    }
-
-    if ((window as any).google?.maps) {
-      return; // Script już załadowany
-    }
-
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-    script.async = true;
-    script.defer = true;
-    document.head.appendChild(script);
-  }, []);
 
   return (
     <div className="app-container">
@@ -63,11 +44,11 @@ function App() {
             onChange={(e) => setRadius(Number(e.target.value))}
             className="radius-select"
           >
-            <option value={1000}>1 km</option>
-            <option value={2500}>2.5 km</option>
-            <option value={5000}>5 km</option>
-            <option value={10000}>10 km</option>
-            <option value={25000}>25 km</option>
+            <option value={1}>1 km</option>
+            <option value={2.5}>2.5 km</option>
+            <option value={5}>5 km</option>
+            <option value={10}>10 km</option>
+            <option value={25}>25 km</option>
           </select>
           <span className="location-display">
             📍 {location.lat.toFixed(4)}, {location.lng.toFixed(4)}
@@ -98,7 +79,7 @@ function App() {
       )}
 
       <footer className="footer">
-        <p>© 2026 OptoFinder. Powered by Google Maps API</p>
+        <p>© 2026 OptoFinder. Powered by OpenStreetMap & Overpass API</p>
       </footer>
     </div>
   );

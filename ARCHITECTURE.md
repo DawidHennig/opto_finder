@@ -11,13 +11,16 @@ Frontend Layer
 └── CSS (Vanilla, brak frameworka)
 
 Maps & Location
-├── Google Maps JavaScript API
-├── Places API
+├── Leaflet (map library)
+├── OpenStreetMap (tiles)
+├── Overpass API (POI search)
 └── Geolocation API (Browser)
 
 Build & Dev
 ├── Create React App
 └── Node.js + npm
+
+Benefit: 100% FREE (no API keys!)
 ```
 
 ## Struktura folderów
@@ -216,37 +219,36 @@ Hooks (logic)
 
 ## API Endpoints Used
 
-### Google Maps JavaScript API
-- **Script:** `https://maps.googleapis.com/maps/api/js?key=API_KEY&libraries=places`
-- **Methods:**
-  - `google.maps.Map(element, options)`
-  - `google.maps.Marker(options)`
-  - `google.maps.places.PlacesService(element)`
-  - `PlacesService.nearbySearch(request, callback)`
+### Overpass API
+- **Endpoint:** `https://overpass-api.de/api/interpreter`
+- **Method:** POST
+- **Query:** OverpassQL (OSM query language)
+- **Response:** JSON/XML
+- **Rate Limit:** 1,000,000 nodes/month (free tier)
 
-### Request shape (nearbySearch)
-```javascript
-{
-  location: LatLng,      // Center point
-  radius: 5000,          // Meters
-  keyword: "optometrysta",
-  type: "health"         // Filter by type
-}
+### Request shape (Overpass QL)
+```
+[bbox:south,west,north,east];
+(
+  node["healthcare"="optometrist"];
+  way["healthcare"="optometrist"];
+  node["shop"="optician"];
+  way["shop"="optician"];
+);
+out center;
 ```
 
 ### Response shape (PlaceResult)
 ```javascript
 {
-  id: string,            // Unique ID
-  name: string,          // Place name
-  address: string,       // Address
+  id: string,           // OSM element ID
+  name: string,         // Place name
+  address: string,      // addr:street + addr:city
   lat: number,
   lng: number,
-  phone?: string,        // Phone number
-  website?: string,      // URL
-  rating?: number,       // Star rating
-  openingHours?: [],     // Weekly hours
-  placeId: string
+  phone?: string,       // contact:phone
+  website?: string,     // website tag
+  type: string          // healthcare or shop
 }
 ```
 

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import axios from 'axios';
 import { GeolocationCoords } from './useGeolocation';
 
 export interface PlaceResult {
@@ -11,7 +12,7 @@ export interface PlaceResult {
   website?: string;
   rating?: number;
   openingHours?: string[];
-  placeId: string;
+  type: string;
 }
 
 export const useGooglePlaces = () => {
@@ -20,47 +21,58 @@ export const useGooglePlaces = () => {
   const [error, setError] = useState<string | null>(null);
 
   const searchPlaces = useCallback(
-    (location: GeolocationCoords, radius: number = 5000) => {
+    (location: GeolocationCoords, radiusKm: number = 5) => {
       setLoading(true);
       setError(null);
 
-      if (!(window as any).google?.maps?.places?.PlacesService) {
-        setError('Google Maps Places API nie jest załadowana');
-        setLoading(false);
-        return;
-      }
+      // ponytail: Overpass API dla wyszukiwania "optometrist" (healthcare)
+      const radiusM = radiusKm * 1000;
+      const bbox = `(${location.lat - radiusKm / 111},${location.lng - radiusKm / 111},${
+        location.lat + radiusKm / 111
+      },${location.lng + radiusKm / 111})`;
 
-      const service = new (window as any).google.maps.places.PlacesService(
-        document.createElement('div')
-      );
+      const query = `
+        [bbox:${bbox}];
+        (
+          node["healthcare"="optometrist"](${bbox});
+          way["healthcare"="optometrist"](${bbox});
+          node["shop"="optician"](${bbox});
+          way["shop"="optician"](${bbox});
+        );
+        out center;
+      `;
 
-      const request = {
-        location: new (window as any).google.maps.LatLng(location.lat, location.lng),
-        radius: radius,
-        keyword: 'optometrysta',
-        type: 'health',
-      };
+      axios
+        .post('https://overpass-api.de/api/interpreter', `data=${encodeURIComponent(query)}`, {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          timeout: 10000,
+        })
+        .then((response) => {
+          const elements = response.data.elements || [];
+          const results: PlaceResult[] = elements
+            .filter((el: any) => el.lat && el.lon)
+            .map((el: any, idx: number) => {
+              const center = el.center || { lat: el.lat, lon: el.lon };
+              return {
+                id: `${el.id}`,
+                name: el.tags?.name || el.tags?.['healthcare:speciality'] || 'Optyka',
+                address: [el.tags?.['addr:street'], el.tags?.['addr:city']]
+                  .filter(Boolean)
+                  .join(', ') || 'Adres nieznany',
+                lat: center.lat,
+                lng: center.lon,
+                phone: el.tags?.['contact:phone'] || el.tags?.phone,
+                website: el.tags?.website || el.tags?.['contact:website'],
+                type: el.tags?.healthcare || el.tags?.shop || 'healthcare',
+              };
+            });
 
-      service.nearbySearch(request, (results: any, status: any) => {
-        if (status === (window as any).google.maps.places.PlacesServiceStatus.OK) {
-          const formattedPlaces = results.map((place: any) => ({
-            id: place.place_id,
-            name: place.name,
-            address: place.vicinity,
-            lat: place.geometry.location.lat(),
-            lng: place.geometry.location.lng(),
-            phone: place.formatted_phone_number,
-            website: place.website,
-            rating: place.rating,
-            openingHours: place.opening_hours?.weekday_text,
-            placeId: place.place_id,
-          }));
-          setPlaces(formattedPlaces);
-        } else if (status !== (window as any).google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
-          setError(`Błąd wyszukiwania: ${status}`);
-        }
-        setLoading(false);
-      });
+          setPlaces(results);
+        })
+        .catch(() => {
+          setError('Błąd wyszukiwania. Spróbuj ponownie.');
+        })
+        .finally(() => setLoading(false));
     },
     []
   );
