@@ -59,9 +59,11 @@ npm install
 3. Otwórz DevTools (F12 → Console) i sprawdzaj błędy
 
 **"Brak wyników dla optometrystów"**
-- Spróbuj zasięg 10-25 km zamiast 5 km
+- Domyślny zasięg to 50 km - sprawdź listę po prawej
+- Jeśli dalej nic, zwiększ do 100-200 km
 - Dane pochodzą z OpenStreetMap (crowd-sourced)
 - Możesz dodać dane! https://www.openstreetmap.org/edit
+- Szuka: optometristów, oftalmologów, sklepów z okularami
 
 ---
 
