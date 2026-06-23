@@ -15,6 +15,87 @@ export interface PlaceResult {
   type: string;
 }
 
+// ponytail: Simple XML parser for Overpass response (no extra deps!)
+const parseOverpassXML = (xmlString: string): PlaceResult[] => {
+  const results: PlaceResult[] = [];
+
+  // Parse nodes: <node id="..." lat="..." lon="..."><tag k="..." v="..."/></node>
+  const nodeRegex = /<node[^>]*id="(\d+)"[^>]*lat="([^"]+)"[^>]*lon="([^"]+)"[^>]*>(.*?)<\/node>/gs;
+  const wayRegex = /<way[^>]*id="(\d+)"[^>]*>(.*?)<center[^>]*lat="([^"]+)"[^>]*lon="([^"]+)"[^>]*\/>(.*?)<\/way>/gs;
+
+  let match;
+
+  // Parse nodes
+  while ((match = nodeRegex.exec(xmlString)) !== null) {
+    const id = match[1];
+    const lat = parseFloat(match[2]);
+    const lng = parseFloat(match[3]);
+    const tagsStr = match[4];
+
+    const tags = parseTagsFromXML(tagsStr);
+    const place = createPlaceFromTags(id, lat, lng, tags);
+    if (place) results.push(place);
+  }
+
+  // Parse ways
+  while ((match = wayRegex.exec(xmlString)) !== null) {
+    const id = match[1];
+    const lat = parseFloat(match[3]);
+    const lng = parseFloat(match[4]);
+    const tagsStr = match[2] + match[5];
+
+    const tags = parseTagsFromTags(tagsStr);
+    const place = createPlaceFromTags(id, lat, lng, tags);
+    if (place) results.push(place);
+  }
+
+  return results;
+};
+
+const parseTagsFromXML = (tagsStr: string): { [key: string]: string } => {
+  const tags: { [key: string]: string } = {};
+  const tagRegex = /<tag\s+k="([^"]+)"\s+v="([^"]*)"/g;
+  let match;
+
+  while ((match = tagRegex.exec(tagsStr)) !== null) {
+    tags[match[1]] = match[2];
+  }
+
+  return tags;
+};
+
+const parseTagsFromTags = (tagsStr: string): { [key: string]: string } => {
+  // For way tags which are after center tag
+  const tags: { [key: string]: string } = {};
+  const tagRegex = /<tag\s+k="([^"]+)"\s+v="([^"]*)"/g;
+  let match;
+
+  while ((match = tagRegex.exec(tagsStr)) !== null) {
+    tags[match[1]] = match[2];
+  }
+
+  return tags;
+};
+
+const createPlaceFromTags = (id: string, lat: number, lng: number, tags: { [key: string]: string }): PlaceResult | null => {
+  if (!lat || !lng || isNaN(lat) || isNaN(lng)) return null;
+
+  const address = [tags['addr:street'], tags['addr:housenumber'], tags['addr:postcode'], tags['addr:city']]
+    .filter(Boolean)
+    .join(', ') || tags.name || 'Adres nieznany';
+
+  return {
+    id: id,
+    name: tags.name || tags['healthcare:speciality'] || tags.shop || 'Optyka',
+    address: address,
+    lat: lat,
+    lng: lng,
+    phone: tags['contact:phone'] || tags.phone,
+    website: tags.website || tags['contact:website'],
+    type: tags.healthcare || tags.shop || 'healthcare',
+  };
+};
+
 export const useGooglePlaces = () => {
   const [places, setPlaces] = useState<PlaceResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -25,83 +106,40 @@ export const useGooglePlaces = () => {
       setLoading(true);
       setError(null);
 
-    // ponytail: Overpass API - simplified query (Overpass can be picky)
-    // Format: [bbox:south,west,north,east]
-    const south = location.lat - radiusKm / 111;
-    const west = location.lng - radiusKm / 111;
-    const north = location.lat + radiusKm / 111;
-    const east = location.lng + radiusKm / 111;
-    const bbox = `[bbox:${south},${west},${north},${east}]`;
+      // Overpass API bbox format
+      const south = location.lat - radiusKm / 111;
+      const west = location.lng - radiusKm / 111;
+      const north = location.lat + radiusKm / 111;
+      const east = location.lng + radiusKm / 111;
+      const bbox = `[bbox:${south},${west},${north},${east}]`;
 
-    const query = `${bbox};(node["healthcare"="optometrist"];way["healthcare"="optometrist"];node["healthcare"="ophthalmology"];way["healthcare"="ophthalmology"];node["shop"="optician"];way["shop"="optician"];node["shop"="glasses"];way["shop"="glasses"];);out center;`;
+      // Query: search for optometrist, ophthalmology, optician, glasses
+      const query = `${bbox};(node["healthcare"="optometrist"];way["healthcare"="optometrist"];node["healthcare"="ophthalmology"];way["healthcare"="ophthalmology"];node["shop"="optician"];way["shop"="optician"];node["shop"="glasses"];way["shop"="glasses"];);out center;`;
 
-      // ponytail: Try Overpass, fallback to simpler query if needed
-      const makeRequest = () => {
-        console.log('🔍 Searching with radius:', radiusKm, 'km at', location);
-        
-        return axios.post('https://overpass-api.de/api/interpreter', `data=${encodeURIComponent(query)}`, {
+      console.log('🔍 Searching Overpass API, radius:', radiusKm, 'km');
+
+      axios
+        .post('https://overpass-api.de/api/interpreter', `data=${encodeURIComponent(query)}`, {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          timeout: 15000,
-        });
-      };
-
-      makeRequest()
+          timeout: 20000,
+        })
         .then((response) => {
-          console.log('✅ Overpass response:', response.status, response.data);
-          
-          // Check for Overpass error response
-          if (response.data.error) {
-            throw new Error(`Overpass API error: ${response.data.error.message}`);
-          }
-
-          const elements = response.data.elements || [];
-          console.log(`📍 Found ${elements.length} raw elements`);
-          
-          const results: PlaceResult[] = elements
-            .filter((el: any) => el.lat && el.lon)
-            .map((el: any) => {
-              const center = el.center || { lat: el.lat, lon: el.lon };
-              const tags = el.tags || {};
-              
-              // Build address from available tags
-              const address = [
-                tags['addr:street'],
-                tags['addr:housenumber'],
-                tags['addr:postcode'],
-                tags['addr:city'],
-                tags['addr:town'],
-                tags['addr:suburb']
-              ]
-                .filter(Boolean)
-                .join(', ') || tags.name || 'Adres nieznany';
-
-              return {
-                id: `${el.id}`,
-                name: tags.name || tags['healthcare:speciality'] || tags.shop || 'Optyka',
-                address: address,
-                lat: center.lat,
-                lng: center.lon,
-                phone: tags['contact:phone'] || tags.phone,
-                website: tags.website || tags['contact:website'],
-                type: tags.healthcare || tags.shop || 'healthcare',
-              };
-            });
-
-          console.log(`✅ Found ${results.length} places after filtering`);
+          console.log('✅ Overpass response received, parsing...');
+          const results = parseOverpassXML(response.data);
+          console.log(`✅ Found ${results.length} places`);
           setPlaces(results);
         })
         .catch((error) => {
-          console.error('❌ Search error:', error.message, error.response?.data);
-          
-          // More specific error messages
+          console.error('❌ Search error:', error.message);
+
           if (error.code === 'ECONNABORTED') {
             setError('Timeout - Overpass API nie odpowiada. Spróbuj za chwilę.');
           } else if (error.response?.status === 429) {
-            setError('Za wiele zapytań. Czekaj kilka minut i spróbuj ponownie.');
-          } else if (error.response?.data?.error) {
-            setError(`Błąd API: ${error.response.data.error.message}`);
+            setError('Za wiele zapytań. Czekaj kilka minut.');
+          } else if (error.response?.status === 400) {
+            setError('Błąd zapytania. Spróbuj zmienić zasięg.');
           } else {
-            setError('Błąd wyszukiwania. Sprawdź internet lub spróbuj ponownie.');
+            setError('Błąd wyszukiwania. Sprawdź internet i spróbuj ponownie.');
           }
         })
         .finally(() => setLoading(false));
