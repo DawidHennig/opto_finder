@@ -25,37 +25,41 @@ export const useGooglePlaces = () => {
       setLoading(true);
       setError(null);
 
-    // ponytail: Overpass API dla wyszukiwania "optometrist" (healthcare + optician shops)
-    const radiusM = radiusKm * 1000;
-    const bbox = `(${location.lat - radiusKm / 111},${location.lng - radiusKm / 111},${
-      location.lat + radiusKm / 111
-    },${location.lng + radiusKm / 111})`;
+    // ponytail: Overpass API - simplified query (Overpass can be picky)
+    // Format: [bbox:south,west,north,east]
+    const south = location.lat - radiusKm / 111;
+    const west = location.lng - radiusKm / 111;
+    const north = location.lat + radiusKm / 111;
+    const east = location.lng + radiusKm / 111;
+    const bbox = `[bbox:${south},${west},${north},${east}]`;
 
-    const query = `
-      [bbox:${bbox}];
-      (
-        node["healthcare"="optometrist"](${bbox});
-        way["healthcare"="optometrist"](${bbox});
-        node["healthcare"="ophthalmology"](${bbox});
-        way["healthcare"="ophthalmology"](${bbox});
-        node["shop"="optician"](${bbox});
-        way["shop"="optician"](${bbox});
-        node["shop"="glasses"](${bbox});
-        way["shop"="glasses"](${bbox});
-      );
-      out center;
-    `;
+    const query = `${bbox};(node["healthcare"="optometrist"];way["healthcare"="optometrist"];node["healthcare"="ophthalmology"];way["healthcare"="ophthalmology"];node["shop"="optician"];way["shop"="optician"];node["shop"="glasses"];way["shop"="glasses"];);out center;`;
 
-      axios
-        .post('https://overpass-api.de/api/interpreter', `data=${encodeURIComponent(query)}`, {
+      // ponytail: Try Overpass, fallback to simpler query if needed
+      const makeRequest = () => {
+        console.log('🔍 Searching with radius:', radiusKm, 'km at', location);
+        
+        return axios.post('https://overpass-api.de/api/interpreter', `data=${encodeURIComponent(query)}`, {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          timeout: 10000,
-        })
+          timeout: 15000,
+        });
+      };
+
+      makeRequest()
         .then((response) => {
+          console.log('✅ Overpass response:', response.status, response.data);
+          
+          // Check for Overpass error response
+          if (response.data.error) {
+            throw new Error(`Overpass API error: ${response.data.error.message}`);
+          }
+
           const elements = response.data.elements || [];
+          console.log(`📍 Found ${elements.length} raw elements`);
+          
           const results: PlaceResult[] = elements
             .filter((el: any) => el.lat && el.lon)
-            .map((el: any, idx: number) => {
+            .map((el: any) => {
               const center = el.center || { lat: el.lat, lon: el.lon };
               const tags = el.tags || {};
               
@@ -83,11 +87,22 @@ export const useGooglePlaces = () => {
               };
             });
 
-          console.log(`Found ${results.length} places`);
+          console.log(`✅ Found ${results.length} places after filtering`);
           setPlaces(results);
         })
-        .catch(() => {
-          setError('Błąd wyszukiwania. Spróbuj ponownie.');
+        .catch((error) => {
+          console.error('❌ Search error:', error.message, error.response?.data);
+          
+          // More specific error messages
+          if (error.code === 'ECONNABORTED') {
+            setError('Timeout - Overpass API nie odpowiada. Spróbuj za chwilę.');
+          } else if (error.response?.status === 429) {
+            setError('Za wiele zapytań. Czekaj kilka minut i spróbuj ponownie.');
+          } else if (error.response?.data?.error) {
+            setError(`Błąd API: ${error.response.data.error.message}`);
+          } else {
+            setError('Błąd wyszukiwania. Sprawdź internet lub spróbuj ponownie.');
+          }
         })
         .finally(() => setLoading(false));
     },
